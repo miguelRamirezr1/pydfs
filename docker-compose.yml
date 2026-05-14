@@ -6,7 +6,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      #definir
+      - BLOCK_SIZE=67108864
+      - REPLICATION_FACTOR=2
+      - HEARTBEAT_TIMEOUT=15
+      - JWT_SECRET=changeme
     volumes:
       - ./namenode/data:/app/data
 
@@ -15,7 +18,9 @@ services:
     ports:
       - "8001:8001"
     environment:
-      #definir
+      - NODE_ID=dn1
+      - NAMENODE_URL=http://namenode:8000
+      - HEARTBEAT_INTERVAL=5
     volumes:
       - dn1_blocks:/app/blocks
     depends_on:
@@ -26,7 +31,9 @@ services:
     ports:
       - "8002:8001"
     environment:
-      #definir
+      - NODE_ID=dn2
+      - NAMENODE_URL=http://namenode:8000
+      - HEARTBEAT_INTERVAL=5
     volumes:
       - dn2_blocks:/app/blocks
     depends_on:
@@ -37,7 +44,9 @@ services:
     ports:
       - "8003:8001"
     environment:
-      #definir
+      - NODE_ID=dn3
+      - NAMENODE_URL=http://namenode:8000
+      - HEARTBEAT_INTERVAL=5
     volumes:
       - dn3_blocks:/app/blocks
     depends_on:
