@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  namenode:
+    build: ./namenode
+    ports:
+      - "8000:8000"
+    environment:
+      #definir
+    volumes:
+      - ./namenode/data:/app/data
+
+  datanode1:
+    build: ./datanode
+    ports:
+      - "8001:8001"
+    environment:
+      #definir
+    volumes:
+      - dn1_blocks:/app/blocks
+    depends_on:
+      - namenode
+
+  datanode2:
+    build: ./datanode
+    ports:
+      - "8002:8001"
+    environment:
+      #definir
+    volumes:
+      - dn2_blocks:/app/blocks
+    depends_on:
+      - namenode
+
+  datanode3:
+    build: ./datanode
+    ports:
+      - "8003:8001"
+    environment:
+      #definir
+    volumes:
+      - dn3_blocks:/app/blocks
+    depends_on:
+      - namenode
+
+volumes:
+  dn1_blocks:
+  dn2_blocks:
+  dn3_blocks:
