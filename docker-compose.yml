@@ -12,6 +12,8 @@ services:
       - JWT_SECRET=changeme
     volumes:
       - ./namenode/data:/app/data
+    networks:
+      - dfs-network
 
   datanode1:
     build: ./datanode
@@ -21,10 +23,13 @@ services:
       - NODE_ID=dn1
       - NAMENODE_URL=http://namenode:8000
       - HEARTBEAT_INTERVAL=5
+      - JWT_SECRET=changeme
     volumes:
       - dn1_blocks:/app/blocks
     depends_on:
       - namenode
+    networks:
+      - dfs-network
 
   datanode2:
     build: ./datanode
@@ -34,10 +39,13 @@ services:
       - NODE_ID=dn2
       - NAMENODE_URL=http://namenode:8000
       - HEARTBEAT_INTERVAL=5
+      - JWT_SECRET=changeme
     volumes:
       - dn2_blocks:/app/blocks
     depends_on:
       - namenode
+    networks:
+      - dfs-network
 
   datanode3:
     build: ./datanode
@@ -47,12 +55,30 @@ services:
       - NODE_ID=dn3
       - NAMENODE_URL=http://namenode:8000
       - HEARTBEAT_INTERVAL=5
+      - JWT_SECRET=changeme
     volumes:
       - dn3_blocks:/app/blocks
     depends_on:
       - namenode
+    networks:
+      - dfs-network
+
+  client:
+    build: ./client
+    environment:
+      - NAMENODE_URL=http://namenode:8000
+    depends_on:
+      - namenode
+    stdin_open: true
+    tty: true
+    networks:
+      - dfs-network
 
 volumes:
   dn1_blocks:
   dn2_blocks:
   dn3_blocks:
+
+networks:
+  dfs-network:
+    driver: bridge
