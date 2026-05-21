@@ -10,6 +10,7 @@ services:
       - REPLICATION_FACTOR=2
       - HEARTBEAT_TIMEOUT=15
       - JWT_SECRET=changeme
+      - ADMIN_SECRET=admin-secret
     volumes:
       - ./namenode/data:/app/data
     networks:
