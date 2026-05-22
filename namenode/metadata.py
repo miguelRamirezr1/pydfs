@@ -74,6 +74,22 @@ def get_user(username: str) -> Optional[sqlite3.Row]:
 
 # ── Files ─────────────────────────────────────────────────────────────────────
 
+def get_file(owner: str, path: str) -> Optional[sqlite3.Row]:
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM files WHERE owner = ? AND path = ?", (owner, path)
+        ).fetchone()
+
+
+def get_file_blocks(file_id: str) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT block_id, seq, datanode FROM blocks WHERE file_id = ? ORDER BY seq",
+            (file_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def list_files(owner: str, directory: Optional[str] = None) -> list[dict]:
     with get_conn() as conn:
         if directory:
