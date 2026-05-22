@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -27,6 +28,7 @@ def init_db() -> None:
                 owner      TEXT NOT NULL,
                 path       TEXT NOT NULL,
                 size       INTEGER NOT NULL,
+                is_dir     INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
             );
 
@@ -70,6 +72,21 @@ def get_user(username: str) -> Optional[sqlite3.Row]:
         return conn.execute(
             "SELECT * FROM users WHERE username = ?", (username,)
         ).fetchone()
+
+
+# ── Dirs ──────────────────────────────────────────────────────────────────────
+
+def create_dir(owner: str, path: str) -> bool:
+    """Returns False if path already exists for this owner."""
+    try:
+        with get_conn() as conn:
+            conn.execute(
+                "INSERT INTO files (file_id, owner, path, size, is_dir, created_at) VALUES (?, ?, ?, 0, 1, ?)",
+                (str(uuid.uuid4()), owner, path, datetime.now(timezone.utc).isoformat()),
+            )
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
 
 # ── Files ─────────────────────────────────────────────────────────────────────
