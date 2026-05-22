@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 
-from auth import hash_password
-from metadata import get_conn
+from auth import create_token, hash_password, verify_password
+from metadata import get_conn, get_user
 
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")
 
@@ -38,3 +38,16 @@ def register(body: RegisterRequest, _: None = Depends(_require_admin)):
     except sqlite3.IntegrityError:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="El usuario ya existe")
     return {"username": body.username, "created_at": now}
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@router.post("/login")
+def login(body: LoginRequest):
+    user = get_user(body.username)
+    if not user or not verify_password(body.password, user["password_hash"]):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Credenciales inválidas")
+    return {"access_token": create_token(body.username), "token_type": "bearer"}
