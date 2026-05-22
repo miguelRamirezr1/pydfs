@@ -89,6 +89,26 @@ def create_dir(owner: str, path: str) -> bool:
         return False
 
 
+def delete_dir(owner: str, path: str) -> str:
+    """Delete a logical directory. Returns 'ok', 'not_found', or 'not_empty'."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT file_id FROM files WHERE owner = ? AND path = ? AND is_dir = 1",
+            (owner, path),
+        ).fetchone()
+        if not row:
+            return "not_found"
+        prefix = path.rstrip("/") + "/"
+        children = conn.execute(
+            "SELECT 1 FROM files WHERE owner = ? AND path LIKE ? LIMIT 1",
+            (owner, prefix + "%"),
+        ).fetchone()
+        if children:
+            return "not_empty"
+        conn.execute("DELETE FROM files WHERE file_id = ?", (row["file_id"],))
+        return "ok"
+
+
 # ── Files ─────────────────────────────────────────────────────────────────────
 
 def get_file(owner: str, path: str) -> Optional[sqlite3.Row]:
