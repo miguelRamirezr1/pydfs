@@ -70,3 +70,20 @@ def get_user(username: str) -> Optional[sqlite3.Row]:
         return conn.execute(
             "SELECT * FROM users WHERE username = ?", (username,)
         ).fetchone()
+
+
+# ── Files ─────────────────────────────────────────────────────────────────────
+
+def list_files(owner: str, directory: Optional[str] = None) -> list[dict]:
+    with get_conn() as conn:
+        if directory:
+            prefix = directory.rstrip("/") + "/"
+            rows = conn.execute(
+                "SELECT * FROM files WHERE owner = ? AND path LIKE ?",
+                (owner, prefix + "%"),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM files WHERE owner = ?", (owner,)
+            ).fetchall()
+        return [dict(r) for r in rows]
