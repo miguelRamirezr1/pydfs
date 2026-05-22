@@ -90,6 +90,27 @@ def get_file_blocks(file_id: str) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def delete_file(owner: str, path: str) -> Optional[list[dict]]:
+    """Delete file and blocks from SQLite. Returns list of {block_id, host, port} or None if not found."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT file_id FROM files WHERE owner = ? AND path = ?", (owner, path)
+        ).fetchone()
+        if not row:
+            return None
+        file_id = row["file_id"]
+        blocks = conn.execute(
+            """SELECT b.block_id, d.host, d.port
+               FROM blocks b
+               JOIN datanodes d ON d.node_id = b.datanode
+               WHERE b.file_id = ?""",
+            (file_id,),
+        ).fetchall()
+        conn.execute("DELETE FROM blocks WHERE file_id = ?", (file_id,))
+        conn.execute("DELETE FROM files WHERE file_id = ?", (file_id,))
+        return [dict(b) for b in blocks]
+
+
 def list_files(owner: str, directory: Optional[str] = None) -> list[dict]:
     with get_conn() as conn:
         if directory:
