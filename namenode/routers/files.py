@@ -19,6 +19,7 @@ def list_files(directory: Optional[str] = None, owner: str = Depends(get_current
 
 @router.get("/{path:path}")
 def get_file(path: str, owner: str = Depends(get_current_user)):
+    path = path.strip("/")
     f = db.get_file(owner, path)
     if not f:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Archivo no encontrado")
@@ -33,6 +34,7 @@ def get_file(path: str, owner: str = Depends(get_current_user)):
 
 @router.delete("/{path:path}", status_code=204)
 def delete_file(path: str, owner: str = Depends(get_current_user)):
+    path = path.strip("/")
     blocks = db.delete_file(owner, path)
     if blocks is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Archivo no encontrado")
