@@ -87,6 +87,29 @@ def get_active_datanodes(timeout_s: float) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+# ── Files ─────────────────────────────────────────────────────────────────────
+
+def create_file(file_id: str, owner: str, path: str, size: int) -> bool:
+    """Returns False if file_id or (owner, path) already exists."""
+    try:
+        with get_conn() as conn:
+            conn.execute(
+                "INSERT INTO files (file_id, owner, path, size, is_dir, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+                (file_id, owner, path, size, datetime.now(timezone.utc).isoformat()),
+            )
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+
+def create_block(block_id: str, file_id: str, seq: int, datanode: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO blocks (block_id, file_id, seq, datanode) VALUES (?, ?, ?, ?)",
+            (block_id, file_id, seq, datanode),
+        )
+
+
 # ── Dirs ──────────────────────────────────────────────────────────────────────
 
 def create_dir(owner: str, path: str) -> bool:

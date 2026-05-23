@@ -25,6 +25,19 @@ class UploadRequest(BaseModel):
     size: int
 
 
+class BlockConfirm(BaseModel):
+    block_id: str
+    seq: int
+    primary_node_id: str
+    replica_node_id: str
+
+
+class ConfirmRequest(BaseModel):
+    path: str
+    size: int
+    blocks: list[BlockConfirm]
+
+
 @router.post("/upload")
 def upload_plan(req: UploadRequest, owner: str = Depends(get_current_user)):
     path = req.path.strip("/")
@@ -53,6 +66,20 @@ def upload_plan(req: UploadRequest, owner: str = Depends(get_current_user)):
         })
 
     return {"file_id": file_id, "block_size": BLOCK_SIZE, "blocks": blocks}
+
+
+@router.post("/{file_id}/confirm", status_code=201)
+def confirm_upload(file_id: str, req: ConfirmRequest, owner: str = Depends(get_current_user)):
+    path = req.path.strip("/")
+    ok = db.create_file(file_id, owner, path, req.size)
+    if not ok:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="El archivo ya fue confirmado o la ruta ya existe")
+
+    for b in req.blocks:
+        db.create_block(b.block_id, file_id, b.seq, b.primary_node_id)
+        db.create_block(b.block_id, file_id, b.seq, b.replica_node_id)
+
+    return {"ok": True, "file_id": file_id}
 
 
 @router.get("")
