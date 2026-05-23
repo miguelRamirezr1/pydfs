@@ -151,7 +151,7 @@ def delete_file(owner: str, path: str) -> Optional[list[dict]]:
 def list_files(owner: str, directory: Optional[str] = None) -> list[dict]:
     with get_conn() as conn:
         if directory:
-            prefix = directory.rstrip("/") + "/"
+            prefix = directory.strip("/") + "/"
             rows = conn.execute(
                 "SELECT * FROM files WHERE owner = ? AND path LIKE ?",
                 (owner, prefix + "%"),
