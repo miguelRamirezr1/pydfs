@@ -74,6 +74,19 @@ def get_user(username: str) -> Optional[sqlite3.Row]:
         ).fetchone()
 
 
+# ── DataNodes ─────────────────────────────────────────────────────────────────
+
+def get_active_datanodes(timeout_s: float) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """SELECT * FROM datanodes
+               WHERE (julianday('now') - julianday(last_heartbeat)) * 86400 < ?
+               ORDER BY node_id""",
+            (timeout_s,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 # ── Dirs ──────────────────────────────────────────────────────────────────────
 
 def create_dir(owner: str, path: str) -> bool:
