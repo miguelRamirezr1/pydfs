@@ -100,6 +100,18 @@ def update_heartbeat(node_id: str, free_bytes: int) -> bool:
         return cursor.rowcount > 0
 
 
+def get_all_datanodes(timeout_s: float) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """SELECT *,
+                   CASE WHEN (julianday('now') - julianday(last_heartbeat)) * 86400 < ?
+                        THEN 'active' ELSE 'down' END AS status
+               FROM datanodes ORDER BY node_id""",
+            (timeout_s,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_active_datanodes(timeout_s: float) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(

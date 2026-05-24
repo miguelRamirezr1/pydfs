@@ -1,7 +1,11 @@
+import os
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 import metadata as db
+
+HEARTBEAT_TIMEOUT = float(os.getenv("HEARTBEAT_TIMEOUT", "15"))
 
 router = APIRouter(prefix="/datanodes", tags=["cluster"])
 
@@ -29,3 +33,8 @@ def heartbeat(body: HeartbeatRequest):
     if not db.update_heartbeat(body.node_id, body.free_bytes):
         raise HTTPException(status_code=404, detail="DataNode not found")
     return {"status": "ok", "node_id": body.node_id}
+
+
+@router.get("/status", status_code=200)
+def status():
+    return db.get_all_datanodes(HEARTBEAT_TIMEOUT)
