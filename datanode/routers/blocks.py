@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
 
 BLOCKS_DIR = Path(os.getenv("BLOCKS_DIR", "/app/blocks"))
@@ -41,3 +41,9 @@ def get_block(block_id: str):
     if not path.exists():
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Bloque no encontrado")
     return FileResponse(path, media_type="application/octet-stream")
+
+
+@router.delete("/{block_id}", status_code=204)
+def delete_block(block_id: str):
+    (BLOCKS_DIR / block_id).unlink(missing_ok=True)
+    return Response(status_code=204)
