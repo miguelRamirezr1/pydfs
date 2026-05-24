@@ -223,7 +223,10 @@ def get_file(owner: str, path: str) -> Optional[sqlite3.Row]:
 def get_file_blocks(file_id: str) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT block_id, seq, datanode FROM blocks WHERE file_id = ? ORDER BY seq",
+            """SELECT b.block_id, b.seq, b.datanode, d.host, d.port
+               FROM blocks b
+               JOIN datanodes d ON d.node_id = b.datanode
+               WHERE b.file_id = ? ORDER BY b.seq""",
             (file_id,),
         ).fetchall()
         return [dict(r) for r in rows]
