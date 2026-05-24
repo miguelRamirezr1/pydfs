@@ -285,7 +285,7 @@ CREATE TABLE datanodes (
 
 Todas las pruebas se ejecutaron sobre el clúster corriendo en Docker Compose con `BLOCK_SIZE=3` (para partición visible) y `BLOCK_SIZE=67108864` (producción).
 
-### TSK 029 — put/get end-to-end ✅
+### TSK 029 — put/get end-to-end ✓
 
 Archivo `aaabbbccc` (9 bytes) particionado en 3 bloques con `BLOCK_SIZE=3`.
 
@@ -296,14 +296,14 @@ Archivo `aaabbbccc` (9 bytes) particionado en 3 bloques con `BLOCK_SIZE=3`.
 | 2   | `ccc`     | dn3 + dn1 |
 
 ```
-diff test.txt test_reconstruido.txt  →  vacío ✅
+diff test.txt test_reconstruido.txt  →  vacío ✓
 ```
 
-### TSK 030 — Replicación ✅
+### TSK 030 — Replicación ✓
 
 Cada bloque tiene exactamente 2 réplicas en SQLite y en los volúmenes físicos Docker. Verificado con `COUNT(*) GROUP BY block_id = 2` para todos los bloques.
 
-### TSK 031 — Tolerancia a fallos ✅
+### TSK 031 — Tolerancia a fallos ✓
 
 ```
 docker stop pydfs-datanode2-1
@@ -311,10 +311,10 @@ docker stop pydfs-datanode2-1
 # Re-replicación automática:
 #   seq=0: dn1 → dn3  (dn2 tenía la réplica)
 #   seq=1: dn3 → dn1  (dn2 era el primario)
-# get con dn2 caído → diff vacío ✅
+# get con dn2 caído → diff vacío ✓
 ```
 
-### TSK 032 — Comandos CLI ✅
+### TSK 032 — Comandos CLI ✓
 
 | Comando | Casos válidos | Casos inválidos |
 |---------|--------------|-----------------|
@@ -327,11 +327,11 @@ docker stop pydfs-datanode2-1
 
 Todos los errores retornan `exit code 1` con mensaje descriptivo, sin stack traces.
 
-### TSK 033 — Aislamiento entre usuarios ✅
+### TSK 033 — Aislamiento entre usuarios ✓
 
 `testuser` y `user2` no pueden ver ni acceder a los archivos del otro. El sistema retorna 404 (no revela existencia de archivos ajenos). El aislamiento está garantizado por el campo `owner` en SQLite combinado con el JWT firmado.
 
-### ENA 010 — Logs del sistema ✅
+### ENA 010 — Logs del sistema ✓
 
 Eventos cubiertos por logs:
 
