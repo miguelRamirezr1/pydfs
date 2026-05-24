@@ -123,6 +123,36 @@ def get_active_datanodes(timeout_s: float) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def get_blocks_on_node(node_id: str) -> list[str]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT block_id FROM blocks WHERE datanode = ?",
+            (node_id,),
+        ).fetchall()
+        return [r["block_id"] for r in rows]
+
+
+def get_surviving_replica(block_id: str, dead_node_id: str) -> Optional[dict]:
+    with get_conn() as conn:
+        row = conn.execute(
+            """SELECT d.node_id, d.host, d.port
+               FROM blocks b
+               JOIN datanodes d ON d.node_id = b.datanode
+               WHERE b.block_id = ? AND b.datanode != ?
+               LIMIT 1""",
+            (block_id, dead_node_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def replace_block_replica(block_id: str, old_node_id: str, new_node_id: str) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE blocks SET datanode = ? WHERE block_id = ? AND datanode = ?",
+            (new_node_id, block_id, old_node_id),
+        )
+
+
 # ── Files ─────────────────────────────────────────────────────────────────────
 
 def create_file(file_id: str, owner: str, path: str, size: int) -> bool:
