@@ -1,0 +1,219 @@
+================================================================
+ FLUJO COMPLETO DFS — POSTMAN
+ Prerequisito: docker compose up --build -d corriendo
+================================================================
+
+NOTA SOBRE URLs DE DATANODES
+--------------------------------------------------------------
+El NameNode devuelve URLs internas de Docker (ej. http://datanode1:8001).
+Postman corre en el host y no resuelve esos hostnames.
+Usa siempre el mapeo de puertos del host:
+
+  datanode1:8001  →  localhost:8001
+  datanode2:8001  →  localhost:8002
+  datanode3:8001  →  localhost:8003
+
+Para replica_host en el Paso 4 SÍ usa el nombre interno
+(datanode2, datanode3) porque es dn1 dentro de Docker
+el que se conecta a dn2, no Postman.
+
+================================================================
+PASO 1 — Registrar usuario
+================================================================
+Método : POST
+URL    : http://localhost:8000/auth/register
+Headers: Content-Type: application/json
+Body (raw JSON):
+{
+  "username": "testuser",
+  "password": "testpass123"
+}
+
+Respuesta esperada (201):
+{
+  "username": "testuser",
+  "created_at": "2026-05-24T..."
+}
+
+NOTA: Solo el primer usuario no requiere token de administrador.
+Para registrar usuarios adicionales se necesita el header:
+  X-Admin-Token: admin-secret
+
+================================================================
+PASO 2 — Login (obtener JWT)
+================================================================
+Método : POST
+URL    : http://localhost:8000/auth/login
+Headers: Content-Type: application/json
+Body (raw JSON):
+{
+  "username": "testuser",
+  "password": "testpass123"
+}
+
+Respuesta esperada (200):
+{
+  "access_token": "eyJhbGci...",
+  "token_type": "bearer"
+}
+
+>>> COPIA el valor de access_token — lo usas en todos los pasos siguientes.
+    En Postman: Authorization → Bearer Token → pega el token.
+
+================================================================
+PASO 3 — Planificar subida (el NameNode asigna bloques y DataNodes)
+================================================================
+Método : POST
+URL    : http://localhost:8000/files/upload
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer <token del paso 2>
+Body (raw JSON):
+{
+  "path": "test.txt",
+  "size": 9
+}
+
+NOTA: "size" es el tamaño en bytes del archivo que vas a subir.
+      test.txt = "aaabbbccc" = 9 bytes.
+      Con BLOCK_SIZE=67108864 (64 MB), ceil(9/67108864) = 1 bloque.
+
+Respuesta esperada (200):
+{
+  "file_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "block_size": 67108864,
+  "blocks": [
+    {
+      "block_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+      "seq": 0,
+      "primary_node_id": "dn1",
+      "primary_url": "http://datanode1:8001",
+      "replica_node_id": "dn2",
+      "replica_url": "http://datanode2:8001"
+    }
+  ]
+}
+
+>>> COPIA file_id y block_id — los usas en los pasos 4 y 5.
+    primary_url → reemplaza datanode1 por localhost.
+    replica_node_id → úsalo tal cual en el query param del paso 4.
+
+================================================================
+PASO 4 — Subir el bloque al DataNode primario
+================================================================
+Método : PUT
+URL    : http://localhost:8001/blocks/<block_id del paso 3>?replica_host=datanode2&replica_port=8001
+Headers:
+  Content-Type: application/octet-stream
+Body   : Binary → selecciona test.txt desde disco
+
+NOTAS:
+- El puerto en la URL (8001) corresponde a datanode1 en el host.
+- replica_host=datanode2 (nombre interno Docker, NO localhost).
+  dn1 se conecta a dn2 dentro de la red Docker.
+- replica_port=8001 (puerto interno Docker de dn2, NO 8002).
+- El DataNode primario recibe el archivo, lo replica a dn2
+  de forma síncrona, y solo responde OK cuando ambos lo tienen.
+
+Respuesta esperada (200):
+{
+  "status": "ok",
+  "block_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+}
+
+Si la replicación falla devuelve 502 y borra su copia local.
+
+================================================================
+PASO 5 — Confirmar al NameNode que el bloque fue guardado
+================================================================
+Método : POST
+URL    : http://localhost:8000/files/<file_id del paso 3>/confirm
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer <token del paso 2>
+Body (raw JSON):
+{
+  "path": "test.txt",
+  "size": 9,
+  "blocks": [
+    {
+      "block_id": "<block_id del paso 3>",
+      "seq": 0,
+      "primary_node_id": "dn1",
+      "replica_node_id": "dn2"
+    }
+  ]
+}
+
+Respuesta esperada (201):
+{
+  "ok": true,
+  "file_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+
+El NameNode escribe en SQLite: archivo test.txt, 1 bloque,
+almacenado en dn1 (primario) y dn2 (réplica).
+
+================================================================
+PASO 6 — Leer metadatos del archivo
+================================================================
+Método : GET
+URL    : http://localhost:8000/files/test.txt
+Headers:
+  Authorization: Bearer <token del paso 2>
+Body   : ninguno
+
+Respuesta esperada (200):
+{
+  "file_id": "xxxxxxxx-...",
+  "path": "test.txt",
+  "size": 9,
+  "created_at": "2026-05-24T...",
+  "blocks": [
+    {
+      "block_id": "yyyyyyyy-...",
+      "seq": 0,
+      "datanode": "dn1",
+      "host": "datanode1",
+      "port": 8001
+    },
+    {
+      "block_id": "yyyyyyyy-...",
+      "seq": 0,
+      "datanode": "dn2",
+      "host": "datanode2",
+      "port": 8001
+    }
+  ]
+}
+
+El mismo block_id aparece dos veces (una fila por réplica).
+Para reconstruir el archivo se usa solo una copia por seq,
+en orden ascendente de seq.
+
+================================================================
+PASO 7 — Descargar el bloque del DataNode
+================================================================
+Método : GET
+URL    : http://localhost:8001/blocks/<block_id del paso 3>
+Headers: ninguno
+Body   : ninguno
+
+Respuesta esperada (200):
+  Bytes crudos del archivo (aaabbbccc).
+  En Postman: pestaña "Body" → "Save Response" para guardar como archivo.
+
+Con múltiples bloques repetirías este paso por cada seq (0, 1, 2...)
+usando el DataNode correspondiente, y concatenarías los resultados
+en orden para reconstruir el archivo original.
+
+================================================================
+VERIFICAR ESTADO DEL CLÚSTER (en cualquier momento)
+================================================================
+Método : GET
+URL    : http://localhost:8000/datanodes/status
+Headers: ninguno
+Body   : ninguno
+
+Muestra todos los DataNodes con su estado (active/down),
+último heartbeat y espacio libre en bytes.
