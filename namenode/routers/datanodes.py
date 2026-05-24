@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 import metadata as db
@@ -13,7 +13,19 @@ class RegisterRequest(BaseModel):
     free_bytes: int = 0
 
 
+class HeartbeatRequest(BaseModel):
+    node_id: str
+    free_bytes: int
+
+
 @router.post("/register", status_code=200)
 def register(body: RegisterRequest):
     db.register_datanode(body.node_id, body.host, body.port, body.free_bytes)
     return {"status": "registered", "node_id": body.node_id}
+
+
+@router.post("/heartbeat", status_code=200)
+def heartbeat(body: HeartbeatRequest):
+    if not db.update_heartbeat(body.node_id, body.free_bytes):
+        raise HTTPException(status_code=404, detail="DataNode not found")
+    return {"status": "ok", "node_id": body.node_id}

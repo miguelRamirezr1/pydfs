@@ -90,6 +90,16 @@ def register_datanode(node_id: str, host: str, port: int, free_bytes: int) -> No
         )
 
 
+def update_heartbeat(node_id: str, free_bytes: int) -> bool:
+    """Returns False if node_id does not exist."""
+    with get_conn() as conn:
+        cursor = conn.execute(
+            "UPDATE datanodes SET last_heartbeat = ?, free_bytes = ? WHERE node_id = ?",
+            (datetime.now(timezone.utc).isoformat(), free_bytes, node_id),
+        )
+        return cursor.rowcount > 0
+
+
 def get_active_datanodes(timeout_s: float) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
