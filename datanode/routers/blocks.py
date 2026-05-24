@@ -4,6 +4,7 @@ from typing import Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import FileResponse
 
 BLOCKS_DIR = Path(os.getenv("BLOCKS_DIR", "/app/blocks"))
 BLOCKS_DIR.mkdir(parents=True, exist_ok=True)
@@ -32,3 +33,11 @@ async def put_block(
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"replicación fallida: {exc}")
 
     return {"status": "ok", "block_id": block_id}
+
+
+@router.get("/{block_id}")
+def get_block(block_id: str):
+    path = BLOCKS_DIR / block_id
+    if not path.exists():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Bloque no encontrado")
+    return FileResponse(path, media_type="application/octet-stream")
