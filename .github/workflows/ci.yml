@@ -1,0 +1,25 @@
+name: CI — Build check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Docker build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build all images
+        run: docker compose build
+
+      - name: Verify containers start
+        run: |
+          docker compose up -d
+          sleep 10
+          curl --fail --silent http://localhost:8000/datanodes/status | python3 -m json.tool
+          docker compose down -v

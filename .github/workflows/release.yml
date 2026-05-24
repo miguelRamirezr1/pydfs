@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ## PyDFS — Sistema de Archivos Distribuido
+
+            DFS minimalista inspirado en HDFS/GFS. Almacena archivos dividiéndolos en bloques
+            y distribuyéndolos entre múltiples DataNodes con replicación automática (factor 2).
+
+            ### Arranque rápido
+
+            ```bash
+            git clone https://github.com/miguelRamirezr1/pydfs.git
+            cd pydfs
+            docker compose up --build -d
+            curl -s http://localhost:8000/datanodes/status | python3 -m json.tool
+            ```
+
+            ### Funcionalidades incluidas
+
+            - Autenticación JWT stateless (NameNode + DataNodes)
+            - Particionamiento de archivos en bloques con Round-Robin entre DataNodes
+            - Replicación síncrona en pipeline (factor 2)
+            - Re-replicación automática ante caída de DataNode (detección en ≤15s)
+            - CLI completo: `put` / `get` / `ls` / `rm` / `mkdir` / `rmdir`
+            - Aislamiento de archivos por usuario
+            - API documentada automáticamente en `/docs` (Swagger UI)
+
+            ### Requisitos
+
+            - Docker >= 24
+            - Docker Compose >= 2.20
