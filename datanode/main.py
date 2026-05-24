@@ -1,2 +1,12 @@
-# DataNode — FastAPI app (same code, configured via env vars)
-# Endpoints: PUT/GET/DELETE /blocks/{id}, POST /blocks/{id}/replicate
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from heartbeat import start as start_heartbeat
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_heartbeat()
+    yield
+
+
+app = FastAPI(title="DataNode", lifespan=lifespan)

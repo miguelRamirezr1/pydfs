@@ -22,6 +22,8 @@ services:
       - "8001:8001"
     environment:
       - NODE_ID=dn1
+      - HOST=datanode1
+      - PORT=8001
       - NAMENODE_URL=http://namenode:8000
       - HEARTBEAT_INTERVAL=5
       - JWT_SECRET=changeme
@@ -38,6 +40,8 @@ services:
       - "8002:8001"
     environment:
       - NODE_ID=dn2
+      - HOST=datanode2
+      - PORT=8001
       - NAMENODE_URL=http://namenode:8000
       - HEARTBEAT_INTERVAL=5
       - JWT_SECRET=changeme
@@ -54,6 +58,8 @@ services:
       - "8003:8001"
     environment:
       - NODE_ID=dn3
+      - HOST=datanode3
+      - PORT=8001
       - NAMENODE_URL=http://namenode:8000
       - HEARTBEAT_INTERVAL=5
       - JWT_SECRET=changeme
