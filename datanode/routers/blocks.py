@@ -5,6 +5,7 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 BLOCKS_DIR = Path(os.getenv("BLOCKS_DIR", "/app/blocks"))
 BLOCKS_DIR.mkdir(parents=True, exist_ok=True)
@@ -47,3 +48,26 @@ def get_block(block_id: str):
 def delete_block(block_id: str):
     (BLOCKS_DIR / block_id).unlink(missing_ok=True)
     return Response(status_code=204)
+
+
+class ReplicateRequest(BaseModel):
+    target_host: str
+    target_port: int
+
+
+@router.post("/{block_id}/replicate", status_code=200)
+async def replicate_block(block_id: str, body: ReplicateRequest):
+    path = BLOCKS_DIR / block_id
+    if not path.exists():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Bloque no encontrado")
+
+    data = path.read_bytes()
+    url = f"http://{body.target_host}:{body.target_port}/blocks/{block_id}"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.put(url, content=data, timeout=30)
+            resp.raise_for_status()
+    except Exception as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"replicación fallida: {exc}")
+
+    return {"status": "ok", "block_id": block_id}
