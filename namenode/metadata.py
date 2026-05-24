@@ -76,6 +76,20 @@ def get_user(username: str) -> Optional[sqlite3.Row]:
 
 # ── DataNodes ─────────────────────────────────────────────────────────────────
 
+def register_datanode(node_id: str, host: str, port: int, free_bytes: int) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            """INSERT INTO datanodes (node_id, host, port, last_heartbeat, free_bytes)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(node_id) DO UPDATE SET
+                   host = excluded.host,
+                   port = excluded.port,
+                   last_heartbeat = excluded.last_heartbeat,
+                   free_bytes = excluded.free_bytes""",
+            (node_id, host, port, datetime.now(timezone.utc).isoformat(), free_bytes),
+        )
+
+
 def get_active_datanodes(timeout_s: float) -> list[dict]:
     with get_conn() as conn:
         rows = conn.execute(
