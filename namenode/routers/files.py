@@ -65,6 +65,7 @@ def upload_plan(req: UploadRequest, owner: str = Depends(get_current_user)):
             "replica_url": f"http://{replica['host']}:{replica['port']}",
         })
 
+    logger.info("plan de subida: owner=%s path=%s size=%d bloques=%d", owner, path, req.size, num_blocks)
     return {"file_id": file_id, "block_size": BLOCK_SIZE, "blocks": blocks}
 
 
@@ -79,6 +80,7 @@ def confirm_upload(file_id: str, req: ConfirmRequest, owner: str = Depends(get_c
         db.create_block(b.block_id, file_id, b.seq, b.primary_node_id)
         db.create_block(b.block_id, file_id, b.seq, b.replica_node_id)
 
+    logger.info("archivo confirmado: owner=%s path=%s size=%d bloques=%d", owner, path, req.size, len(req.blocks))
     return {"ok": True, "file_id": file_id}
 
 
@@ -108,6 +110,7 @@ def delete_file(path: str, owner: str = Depends(get_current_user)):
     blocks = db.delete_file(owner, path)
     if blocks is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Archivo no encontrado")
+    logger.info("archivo eliminado: owner=%s path=%s bloques_notificados=%d", owner, path, len(blocks))
     seen = set()
     for b in blocks:
         key = (b["block_id"], b["host"], b["port"])

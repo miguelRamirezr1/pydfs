@@ -81,3 +81,4 @@ def _monitor_loop() -> None:
 def start_heartbeat_monitor() -> None:
     t = threading.Thread(target=_monitor_loop, daemon=True, name="heartbeat-monitor")
     t.start()
+    logger.info("heartbeat monitor iniciado (intervalo=%ss, timeout=%ss)", CHECK_INTERVAL, HEARTBEAT_TIMEOUT)

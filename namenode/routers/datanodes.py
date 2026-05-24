@@ -1,9 +1,12 @@
+import logging
 import os
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 import metadata as db
+
+logger = logging.getLogger(__name__)
 
 HEARTBEAT_TIMEOUT = float(os.getenv("HEARTBEAT_TIMEOUT", "15"))
 
@@ -25,6 +28,7 @@ class HeartbeatRequest(BaseModel):
 @router.post("/register", status_code=200)
 def register(body: RegisterRequest):
     db.register_datanode(body.node_id, body.host, body.port, body.free_bytes)
+    logger.info("DataNode registrado: %s (%s:%s, free=%d bytes)", body.node_id, body.host, body.port, body.free_bytes)
     return {"status": "registered", "node_id": body.node_id}
 
 
